@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DevPulse — Real-time GitHub activity radar for any developer.">
+  <title>DevPulse — GitHub Activity Radar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-text">Dev<span>Pulse</span></div>
+      </div>
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+    </header>
+
+    <section class="search-section">
+      <span class="search-label">// github activity radar</span>
+      <h1 class="search-title">Track any developer's<br><span>pulse</span> in real-time</h1>
+      <div class="search-box">
+        <span class="search-prefix">github.com /</span>
+        <input type="text" class="search-input" id="usernameInput" placeholder="torvalds" autocomplete="off" />
+        <button class="search-btn" id="searchBtn">ANALYZE →</button>
+      </div>
+      <div class="quick-links">
+        Try:
+        <span class="quick-link" data-user="torvalds">torvalds</span> ·
+        <span class="quick-link" data-user="gaearon">gaearon</span> ·
+        <span class="quick-link" data-user="sindresorhus">sindresorhus</span>
+      </div>
+    </section>
+
+    <div id="loadingSection" class="loading hidden">
+      <div class="loading-spinner"></div>
+      <div id="loadingText">Fetching GitHub data...</div>
+    </div>
+
+    <div id="errorSection" class="hidden">
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <div class="profile-bar" id="profileBar"></div>
+      <div class="stats-grid" id="statsGrid"></div>
+
+      <div class="main-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Contribution Heatmap</div>
+            <div class="card-meta">Last 6 months</div>
+          </div>
+          <div class="heatmap-grid" id="heatmapGrid"></div>
+          <div class="heatmap-legend">
+            Less
+            <div class="legend-cell l0"></div>
+            <div class="legend-cell l1"></div>
+            <div class="legend-cell l2"></div>
+            <div class="legend-cell l3"></div>
+            <div class="legend-cell l4"></div>
+            More
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Language Breakdown</div>
+          </div>
+          <div class="lang-bar-wrap" id="langBars"></div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Commit Streak</div>
+          </div>
+          <div class="streak-display" id="streakDisplay"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Peak Coding Hours</div>
+            <div class="card-meta">based on recent commits</div>
+          </div>
+          <div class="hours-chart" id="hoursChart"></div>
+          <div class="hours-labels">
+            <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top Repositories</div>
+          </div>
+          <div class="repo-list" id="repoList"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Activity</div>
+          </div>
+          <div class="activity-feed" id="activityFeed"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Built with <span>DevPulse</span> · Powered by GitHub API · Open Source
+    </footer>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
