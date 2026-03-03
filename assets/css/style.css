@@ -1,0 +1,458 @@
+:root {
+  --space: #000408;
+  --deep: #020810;
+  --cyan: #00f5ff;
+  --cyan-dim: rgba(0, 245, 255, 0.15);
+  --cyan-glow: rgba(0, 245, 255, 0.4);
+  --green: #00ff88;
+  --orange: #ff6b35;
+  --yellow: #ffd60a;
+  --purple: #b06aff;
+  --pink: #ff4d8d;
+  --red: #ff3355;
+  --white: #e8f4ff;
+  --muted: rgba(232, 244, 255, 0.4);
+  --border: rgba(0, 245, 255, 0.12);
+  --font-display: 'Orbitron', monospace;
+  --font-body: 'Rajdhani', sans-serif;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--space);
+  font-family: var(--font-body);
+  color: var(--white);
+  cursor: grab;
+}
+
+body:active {
+  cursor: grabbing;
+}
+
+#globe-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--space);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s ease;
+}
+
+#loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loader-globe {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--cyan);
+  border-right-color: var(--cyan);
+  animation: spin 1.2s linear infinite;
+  box-shadow: 0 0 30px var(--cyan-glow), inset 0 0 30px rgba(0, 245, 255, 0.05);
+  position: relative;
+}
+
+.loader-globe::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  border-bottom-color: var(--cyan);
+  animation: spin 2s linear infinite reverse;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-text {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: var(--cyan);
+  text-shadow: 0 0 30px var(--cyan-glow);
+}
+
+.loader-sub {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.loader-bar {
+  width: 200px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loader-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.1s ease;
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+#ui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 28px;
+  background: linear-gradient(180deg, rgba(0, 4, 8, 0.9) 0%, transparent 100%);
+  pointer-events: all;
+}
+
+.hud-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  font-size: 22px;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan-glow);
+  animation: iconPulse 3s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { text-shadow: 0 0 20px var(--cyan-glow); }
+  50% { text-shadow: 0 0 40px var(--cyan), 0 0 80px var(--cyan-glow); }
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--white);
+}
+
+.logo-text span {
+  color: var(--cyan);
+}
+
+.hud-tagline {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-left: 1px solid var(--border);
+  padding-left: 20px;
+}
+
+.hud-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.status-dot.live {
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+  animation: livePulse 1.5s infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.stats-panel {
+  position: absolute;
+  top: 80px;
+  left: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: rgba(0, 4, 8, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  pointer-events: all;
+  min-width: 140px;
+}
+
+.stat-block {
+  padding: 14px 18px;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.stat-block:hover {
+  background: var(--cyan-dim);
+}
+
+.stat-val {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan-glow);
+  line-height: 1;
+  margin-bottom: 4px;
+  transition: all 0.3s;
+}
+
+.stat-key {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.stat-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.lang-legend {
+  position: absolute;
+  top: 80px;
+  right: 28px;
+  background: rgba(0, 4, 8, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  backdrop-filter: blur(12px);
+  pointer-events: all;
+  min-width: 160px;
+}
+
+.legend-title {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--white);
+  letter-spacing: 0.5px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-display);
+}
+
+.commit-feed {
+  position: absolute;
+  bottom: 60px;
+  right: 28px;
+  width: 280px;
+  background: rgba(0, 4, 8, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  backdrop-filter: blur(12px);
+  pointer-events: all;
+}
+
+.feed-title {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.feed-list::-webkit-scrollbar {
+  width: 2px;
+}
+
+.feed-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+.feed-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 245, 255, 0.05);
+  animation: feedSlide 0.3s ease;
+  line-height: 1.4;
+}
+
+@keyframes feedSlide {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.feed-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.feed-user {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.feed-repo {
+  color: var(--cyan);
+}
+
+.feed-time {
+  margin-left: auto;
+  font-size: 9px;
+  white-space: nowrap;
+  color: rgba(232, 244, 255, 0.25);
+}
+
+.controls-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.controls-hint span {
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 10px;
+}
+
+.commit-tooltip {
+  position: fixed;
+  background: rgba(0, 4, 8, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  max-width: 220px;
+  line-height: 1.5;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.commit-tooltip.hidden {
+  display: none;
+}
+
+.cinematic-mode #ui-overlay .stats-panel,
+.cinematic-mode #ui-overlay .lang-legend,
+.cinematic-mode #ui-overlay .commit-feed,
+.cinematic-mode #ui-overlay .hud-header,
+.cinematic-mode #ui-overlay .controls-hint {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+@media (max-width: 768px) {
+  .stats-panel {
+    top: auto;
+    bottom: 60px;
+    left: 12px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .lang-legend,
+  .commit-feed {
+    display: none;
+  }
+
+  .stat-block {
+    padding: 10px 14px;
+  }
+}
