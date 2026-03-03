@@ -1,26 +1,3 @@
-const TEXTURE_SOURCES = {
-  day: [
-    'https://unpkg.com/three@0.128.0/examples/textures/planets/earth_atmos_2048.jpg',
-    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/planets/earth_atmos_2048.jpg',
-  ],
-  night: [
-    'https://unpkg.com/three@0.128.0/examples/textures/planets/earth_lights_2048.png',
-    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/planets/earth_lights_2048.png',
-  ],
-  specular: [
-    'https://unpkg.com/three@0.128.0/examples/textures/planets/earth_specular_2048.jpg',
-    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/planets/earth_specular_2048.jpg',
-  ]
-};
-
-function loadTextureWithFallback(loader, urls, onSuccess) {
-  const tryNext = (index) => {
-    if (index >= urls.length) { onSuccess(null); return; }
-    loader.load(urls[index], onSuccess, undefined, () => tryNext(index + 1));
-  };
-  tryNext(0);
-}
-
 class Earth {
   constructor(scene) {
     this.scene = scene;
@@ -31,8 +8,6 @@ class Earth {
     this.atmosphereMesh = null;
     this.glowMesh = null;
     this.radius = 5;
-    this.texturesLoaded = 0;
-    this.totalTextures = 3;
     this.onReady = null;
     this.sunDirection = new THREE.Vector3(5, 1, 3).normalize();
     this.init();
@@ -41,42 +16,21 @@ class Earth {
   init() {
     this.createAtmosphere();
     this.createOuterGlow();
-    this.loadTextures();
+    this.buildEarth();
+    this.createClouds();
+    setTimeout(() => {
+      if (window.updateLoader) window.updateLoader(100);
+      if (this.onReady) this.onReady();
+    }, 100);
   }
 
-  loadTextures() {
-    const loader = new THREE.TextureLoader();
-    loader.crossOrigin = 'anonymous';
-    const textures = {};
-
-    const onLoad = (name, texture) => {
-      textures[name] = texture;
-      this.texturesLoaded++;
-      const pct = Math.round((this.texturesLoaded / this.totalTextures) * 100);
-      if (window.updateLoader) window.updateLoader(pct);
-      if (this.texturesLoaded === this.totalTextures) {
-        this.buildEarth(textures);
-        this.createClouds();
-        if (this.onReady) this.onReady();
-      }
-    };
-
-    loadTextureWithFallback(loader, TEXTURE_SOURCES.day, t => onLoad('day', t));
-    loadTextureWithFallback(loader, TEXTURE_SOURCES.night, t => onLoad('night', t));
-    loadTextureWithFallback(loader, TEXTURE_SOURCES.specular, t => onLoad('specular', t));
-  }
-
-  buildEarth(textures) {
-    const geometry = new THREE.SphereGeometry(this.radius, 64, 64);
+  buildEarth() {
+    const geometry = new THREE.SphereGeometry(this.radius, 96, 96);
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        dayTexture:      { value: textures.day },
-        nightTexture:    { value: textures.night },
-        specularTexture: { value: textures.specular },
-        sunDirection:    { value: this.sunDirection.clone() },
-        hasNight:        { value: textures.night ? 1.0 : 0.0 },
-        hasSpecular:     { value: textures.specular ? 1.0 : 0.0 }
+        sunDirection: { value: this.sunDirection.clone() },
+        time: { value: 0.0 }
       },
       vertexShader: `
         varying vec2 vUv;
@@ -90,36 +44,94 @@ class Earth {
         }
       `,
       fragmentShader: `
-        uniform sampler2D dayTexture;
-        uniform sampler2D nightTexture;
-        uniform sampler2D specularTexture;
         uniform vec3 sunDirection;
-        uniform float hasNight;
-        uniform float hasSpecular;
+        uniform float time;
         varying vec2 vUv;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
 
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+        float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1,311.7,74.7)))*43758.5453); }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p); vec2 f = fract(p);
+          f = f*f*(3.0-2.0*f);
+          return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);
+        }
+
+        float fbm(vec2 p) {
+          float v=0.0, a=0.5;
+          for(int i=0;i<6;i++){v+=a*noise(p);p*=2.1;a*=0.5;}
+          return v;
+        }
+
+        vec3 landColor(float h, float moisture) {
+          if (h < 0.0) return vec3(0.0);
+          vec3 deepForest = vec3(0.05, 0.18, 0.06);
+          vec3 forest     = vec3(0.10, 0.28, 0.10);
+          vec3 grassland  = vec3(0.22, 0.38, 0.12);
+          vec3 savanna    = vec3(0.45, 0.40, 0.15);
+          vec3 desert     = vec3(0.62, 0.52, 0.28);
+          vec3 snow       = vec3(0.88, 0.90, 0.92);
+          vec3 mountain   = vec3(0.35, 0.30, 0.26);
+
+          vec3 col;
+          float lat = abs(vUv.y - 0.5) * 2.0;
+          if (lat > 0.82) return mix(mountain, snow, smoothstep(0.82, 0.95, lat));
+          if (moisture > 0.55) col = mix(grassland, deepForest, (moisture - 0.55) * 4.0);
+          else if (moisture > 0.35) col = mix(savanna, grassland, (moisture - 0.35) * 5.0);
+          else col = mix(desert, savanna, moisture * 2.85);
+          if (h > 0.65) col = mix(col, mountain, (h-0.65)*2.0);
+          if (h > 0.80) col = mix(mountain, snow, (h-0.80)*4.0);
+          return col;
+        }
+
         void main() {
+          float u = vUv.x;
+          float v = vUv.y;
+
+          float continent = fbm(vec2(u*2.8, v*2.8));
+          float detail    = fbm(vec2(u*6.0+1.3, v*6.0+2.1)) * 0.35;
+          float height    = continent + detail - 0.42;
+
+          float moisture  = fbm(vec2(u*3.1+5.0, v*3.1+3.0));
+
+          bool isOcean = height < 0.0;
+
+          vec3 deepOcean    = vec3(0.02, 0.08, 0.22);
+          vec3 shallowOcean = vec3(0.05, 0.20, 0.40);
+          vec3 coast        = vec3(0.08, 0.28, 0.48);
+
+          vec3 baseColor;
+          if (isOcean) {
+            float depth = clamp(-height * 3.0, 0.0, 1.0);
+            baseColor = mix(coast, mix(shallowOcean, deepOcean, depth), depth);
+          } else {
+            baseColor = landColor(height, moisture);
+          }
+
           vec3 normal = normalize(vNormal);
           vec3 sun = normalize(sunDirection);
           float sunDot = dot(normal, sun);
-          float dayNight = smoothstep(-0.2, 0.3, sunDot);
-
-          vec3 dayColor = texture2D(dayTexture, vUv).rgb;
-          vec3 nightColor = hasNight > 0.5 ? texture2D(nightTexture, vUv).rgb * 2.5 : vec3(0.0);
-
+          float dayNight = smoothstep(-0.18, 0.28, sunDot);
           float diffuse = max(0.0, sunDot);
-          float ambient = 0.12;
-          vec3 dayLit = dayColor * (ambient + diffuse * 1.1);
+          float ambient = 0.10;
 
-          float specMask = hasSpecular > 0.5 ? texture2D(specularTexture, vUv).r : 0.3;
-          vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          vec3 halfVec = normalize(sun + viewDir);
-          float spec = pow(max(dot(normal, halfVec), 0.0), 64.0) * specMask * 0.5;
+          vec3 dayLit = baseColor * (ambient + diffuse * 1.15);
 
-          vec3 color = mix(nightColor, dayLit, dayNight) + spec * dayNight;
-          color = pow(max(color, vec3(0.0)), vec3(0.95));
+          vec3 nightLand  = vec3(0.95, 0.80, 0.30) * 0.12;
+          vec3 nightOcean = vec3(0.0);
+          vec3 nightColor = isOcean ? nightOcean : nightLand;
+
+          if (isOcean) {
+            vec3 viewDir = normalize(cameraPosition - vWorldPos);
+            vec3 halfVec = normalize(sun + viewDir);
+            float spec = pow(max(dot(normal, halfVec), 0.0), 80.0) * 0.5 * dayNight;
+            dayLit += vec3(spec * 0.8, spec * 0.9, spec);
+          }
+
+          vec3 color = mix(nightColor, dayLit, dayNight);
+          color = pow(max(color, vec3(0.0)), vec3(0.92));
 
           gl_FragColor = vec4(color, 1.0);
         }
@@ -265,6 +277,7 @@ class Earth {
       this.cloudMesh.material.uniforms.time.value = time * 0.001;
     }
     if (this.earthMesh) {
+      this.earthMesh.material.uniforms.time.value = time * 0.001;
       const sunDir = new THREE.Vector3(
         Math.cos(time * 0.00004),
         0.12,
